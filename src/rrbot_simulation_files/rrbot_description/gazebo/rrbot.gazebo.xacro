@@ -14,23 +14,30 @@ https://github.com/ros-simulation/gazebo_ros_demos/blob/kinetic-devel/rrbot_desc
       </plugin>
     </gazebo>
 
-    <!-- Link1 -->
+    <!-- Link0 -->
     <gazebo reference="${prefix}base_link">
       <material>Gazebo/Orange</material>
     </gazebo>
 
-    <!-- Link2 -->
+    <!-- Link1 -->
     <gazebo reference="${prefix}link1">
       <mu1>0.2</mu1>
       <mu2>0.2</mu2>
-      <material>Gazebo/Black</material>
+      <material>Gazebo/Red</material>
     </gazebo>
 
-    <!-- Link3 -->
+    <!-- Link2 -->
     <gazebo reference="${prefix}link2">
       <mu1>0.2</mu1>
       <mu2>0.2</mu2>
-      <material>Gazebo/Orange</material>
+      <material>Gazebo/Green</material>
+    </gazebo>
+
+    <!-- Link3 -->
+    <gazebo reference="${prefix}link3">
+      <mu1>0.2</mu1>
+      <mu2>0.2</mu2>
+      <material>Gazebo/Blue</material>
     </gazebo>
 
   </xacro:macro>
