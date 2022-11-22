@@ -47,25 +47,24 @@
     </link>
 
     <!-- Link1 (revolute joint) -->
-    <!-- negative rotation axis to account for Gazebo rotating clockwise rather than counter-clockwise -->
     <joint name="${prefix}joint1" type="continuous">
       <parent link="${prefix}base_link" />
       <child link="${prefix}link1" />
-      <origin xyz="0 0 ${height0 + width - axel_offset}" rpy="0 1.5708 0" />
-      <axis xyz="-1 0 0" />
+      <origin xyz="0 0 ${height0 + width - axel_offset}" rpy="0 0 0" />
+      <axis xyz="0 0 1" />
       <dynamics damping="0.7" />
     </joint>
 
     <link name="${prefix}link1">
       <collision>
-        <origin xyz="0 0 ${height1/2 - axel_offset}" rpy="0 0 0" />
+        <origin xyz="${height1/2 - axel_offset} 0 0" rpy="0 1.5708 0" />
         <geometry>
           <box size="${width} ${width} ${height1}" />
         </geometry>
       </collision>
 
       <visual>
-        <origin xyz="0 0 ${height1/2 - axel_offset}" rpy="0 0 0" />
+        <origin xyz="${height1/2 - axel_offset} 0 0" rpy="0 1.5708 0" />
         <geometry>
           <box size="${width} ${width} ${height1}" />
         </geometry>
@@ -73,7 +72,7 @@
       </visual>
 
       <inertial>
-        <origin xyz="0 0 ${height1/2 - axel_offset}" rpy="0 0 0" />
+        <origin xyz="${height1/2 - axel_offset} 0 0" rpy="0 1.5708 0" />
         <mass value="${mass}" />
         <inertia
           ixx="${mass / 12.0 * (width*width + height1*height1)}" ixy="0.0" ixz="0.0"
@@ -83,25 +82,24 @@
     </link>
 
     <!-- Link2 (revolute joint) -->
-    <!-- negative rotation axis to account for Gazebo rotating clockwise rather than counter-clockwise -->
     <joint name="${prefix}joint2" type="continuous">
       <parent link="${prefix}link1" />
       <child link="${prefix}link2" />
-      <origin xyz="-${width} 0 ${height1 - axel_offset*2}" rpy="0 0 0" />
-      <axis xyz="-1 0 0" />
+      <origin xyz="${height1 - axel_offset*2} 0 ${width}" rpy="0 0 0" />
+      <axis xyz="0 0 1" />
       <dynamics damping="0.7" />
     </joint>
 
     <link name="${prefix}link2">
       <collision>
-        <origin xyz="0 0 ${height2/2 - axel_offset}" rpy="0 0 0" />
+        <origin xyz="${height2/2 - axel_offset} 0 0" rpy="0 1.5708 0" />
         <geometry>
           <box size="${width} ${width} ${height2}" />
         </geometry>
       </collision>
 
       <visual>
-        <origin xyz="0 0 ${height2/2 - axel_offset}" rpy="0 0 0" />
+        <origin xyz="${height2/2 - axel_offset} 0 0" rpy="0 1.5708 0" />
         <geometry>
           <box size="${width} ${width} ${height2}" />
         </geometry>
@@ -109,7 +107,7 @@
       </visual>
 
       <inertial>
-        <origin xyz="0 0 ${height2/2 - axel_offset}" rpy="0 0 0" />
+        <origin xyz="${height2/2 - axel_offset} 0 0" rpy="0 1.5708 0" />
         <mass value="${mass}" />
         <inertia
           ixx="${mass / 12.0 * (width*width + height2*height2)}" ixy="0.0" ixz="0.0"
@@ -122,7 +120,7 @@
     <joint name="${prefix}joint3" type="prismatic">
       <parent link="${prefix}link2" />
       <child link="${prefix}link3" />
-      <origin xyz="0 0 ${height2 + width - axel_offset*2}" rpy="3.1416 -1.5708 0" />
+      <origin xyz="${height2 + width - axel_offset*2} 0 0" rpy="3.1416 0 0" />
       <axis xyz="0 0 1" />
       <dynamics damping="0.7" />
       <limit
