@@ -19,15 +19,15 @@ class MinimalService(Node):
         self.get_logger().info('Incoming request\nxyz: [%.2f,%.2f,%.2f]' % (x, y, z))
 
         # fixed parameters
-        d1 = 0.1
-        a1 = 1.0
+        d1 = 1.0 + 0.1
+        a1 = 1.0 - 0.1
         a2 = 1.0
 
         # helper variables
         D = (x*x + y*y - a1*a1 - a2*a2) / (2 * a1 * a2)
 
         # joint variables
-        q3 = np.array([a1-z, a1-z])
+        q3 = np.array([d1-z, d1-z])
         q2 = np.arctan2(np.array([math.sqrt(1 - D*D), -math.sqrt(1 - D*D)]), D)
         q1 = -np.arctan2(a2 * np.sin(q2), a1 + a2 * np.cos(q2)) + np.arctan2(y, x)
 
