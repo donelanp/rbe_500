@@ -1,5 +1,8 @@
+# call service using: ros2 service call /JointRefStates interface_pkg/srv/JointRefState "{joint_states:[0,0,0]}"
+
 import numpy as np
 import rclpy
+from interface_pkg.srv import JointRefState
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
@@ -8,6 +11,7 @@ class PDControllerNode(Node):
     def __init__(self, update_rate, kp, kd):
         # ros node setup (service, subscriber, publisher, timer)
         super().__init__('pd_controller')
+        self.reference_service_ = self.create_service(JointRefState, 'JointRefStates', self.ref_callback)
         self.joint_subscriber_ = self.create_subscription(JointState, '/joint_states', self.joint_callback, 10)
         self.effort_publisher_ = self.create_publisher(Float64MultiArray, '/forward_effort_controller/commands', 10)
         self.timer_ = self.create_timer(update_rate, self.publish_effort)
@@ -38,6 +42,16 @@ class PDControllerNode(Node):
         self.cur_state_[1] = msg.position[1]
         self.cur_state_[2] = msg.position[2]
 
+    def ref_callback(self, request, response):
+        assert len(request.joint_states) == 3, 'request should contain 3 joint values'
+
+        # store reference state
+        self.ref_state_[0] = request.joint_states[0]
+        self.ref_state_[1] = request.joint_states[1]
+        self.ref_state_[2] = request.joint_states[2]
+
+        return response
+
     def publish_effort(self):
         # error between current state and reference state
         cur_error = self.ref_state_ - self.cur_state_
@@ -57,7 +71,7 @@ class PDControllerNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    kp = np.array([[0.1], [0.1], [50]])
+    kp = np.array([[0.1], [0.1], [75]])
     kd = np.array([[0.1], [0.1], [0.1]])
     pd_controller = PDControllerNode(1/30, kp, kd)
     rclpy.spin(pd_controller)
