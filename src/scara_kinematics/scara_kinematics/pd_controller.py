@@ -8,16 +8,16 @@ from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
 class PDControllerNode(Node):
-    def __init__(self, update_rate, kp, kd):
+    def __init__(self, update_period, kp, kd):
         # ros node setup (service, subscriber, publisher, timer)
         super().__init__('pd_controller')
         self.reference_service_ = self.create_service(JointRefState, 'JointRefStates', self.ref_callback)
         self.joint_subscriber_ = self.create_subscription(JointState, '/joint_states', self.joint_callback, 10)
         self.effort_publisher_ = self.create_publisher(Float64MultiArray, '/forward_effort_controller/commands', 10)
-        self.timer_ = self.create_timer(update_rate, self.publish_effort)
+        self.timer_ = self.create_timer(update_period, self.publish_effort)
 
         # update rate for effort
-        self.update_rate_ = update_rate
+        self.update_period_ = update_period
 
         # proportional gain (3x1 vector)
         self.kp_ = kp
@@ -57,7 +57,7 @@ class PDControllerNode(Node):
         cur_error = self.ref_state_ - self.cur_state_
 
         # control input that has proportional and derivate components
-        u = self.kp_ * cur_error + self.kd_ * (cur_error - self.prev_error_) / self.update_rate_
+        u = self.kp_ * cur_error + self.kd_ * (cur_error - self.prev_error_) / self.update_period_
 
         # publish control input
         msg = Float64MultiArray()
