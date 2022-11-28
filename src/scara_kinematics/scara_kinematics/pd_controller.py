@@ -73,7 +73,7 @@ def main(args=None):
     rclpy.init(args=args)
     kp = np.array([[0.1], [0.1], [75]])
     kd = np.array([[0.1], [0.1], [0.1]])
-    pd_controller = PDControllerNode(1/30, kp, kd)
+    pd_controller = PDControllerNode(0.01, kp, kd)
     rclpy.spin(pd_controller)
     rclpy.shutdown()
 
