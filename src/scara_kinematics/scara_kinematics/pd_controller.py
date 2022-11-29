@@ -1,11 +1,62 @@
 # call service using: ros2 service call /JointRefStates interface_pkg/srv/JointRefState "{joint_states:[0,0,0]}"
 
 import numpy as np
+import matplotlib.pyplot as plt
 import rclpy
 from interface_pkg.srv import JointRefState
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
+
+class PlotTool():
+    def __init__(self, update_period_):
+        self.update_period = update_period_
+
+        # initialize counters
+        self.total_time = 10  # seconds
+        self.counter = 0
+        self.total_counts = int(self.total_time / self.update_period)
+
+
+    def newPlot(self, ref_state):
+        self.ref_state = ref_state
+
+        # total joint states stored over the time period
+        self.cur_state_total = np.empty((3,0), float)
+
+        # reference values for each time step will be the same
+        q1_r_arr = np.full((1,self.total_counts), self.ref_state[0])
+        q2_r_arr = np.full((1,self.total_counts), self.ref_state[1])
+        q3_r_arr = np.full((1,self.total_counts), self.ref_state[2])
+        self.ref_state_total = np.vstack((q1_r_arr, q2_r_arr, q3_r_arr))
+        print("Starting plotting tool...")
+
+    def new_position(self, cur_state_):
+        self.cur_state_total = np.hstack([self.cur_state_total, cur_state_])
+        
+        # increment counter for each new position stored
+        self.counter = self.counter + 1
+
+        # if we are at the total time, print each joint's response
+        if self.counter == self.total_counts:
+            self.plot_joints()
+
+    def plot_joints(self):
+        x = np.linspace(0, self.total_time, self.total_counts)
+
+        for i in range(3):
+            # TODO: inefficient way of plotting; creating a new figure each iteration
+            plt.figure()
+            y = self.cur_state_total[i]
+            y_r = self.ref_state_total[i]
+            plt.xlabel('Time (seconds)')
+            plt.ylabel('Joint State')
+            plt.plot(x,y, label="response")
+            plt.plot(x,y_r, label="reference")
+            plt.savefig('joint{0}_response.png'.format(i))
+
+        print('Plots created...')
+
 
 class PDControllerNode(Node):
     def __init__(self, update_period, kp, kd):
@@ -34,6 +85,12 @@ class PDControllerNode(Node):
         # previous state error of joints (3x1 vector)
         self.prev_error_ = np.zeros((3,1))
 
+        # create time response plotting tool
+        self.plot_tool_ = PlotTool(self.update_period_)
+        # create dummy plot that will be overwritten once a reference state is sent
+        self.plot_tool_.newPlot(self.ref_state_)
+
+
     def joint_callback(self, msg):
         assert len(msg.position) == 3, 'message should contain 3 joint values'
 
@@ -42,6 +99,7 @@ class PDControllerNode(Node):
         self.cur_state_[1] = msg.position[1]
         self.cur_state_[2] = msg.position[2]
 
+
     def ref_callback(self, request, response):
         assert len(request.joint_states) == 3, 'request should contain 3 joint values'
 
@@ -49,6 +107,9 @@ class PDControllerNode(Node):
         self.ref_state_[0] = request.joint_states[0]
         self.ref_state_[1] = request.joint_states[1]
         self.ref_state_[2] = request.joint_states[2]
+
+        # overwrite plotting tool for each new request
+        self.plot_tool_.newPlot(self.ref_state_)
 
         return response
 
@@ -69,10 +130,17 @@ class PDControllerNode(Node):
         # store current error as previous error for next round
         self.prev_error_ = cur_error
 
+        # store current joint states
+        self.plot_tool_.new_position(self.cur_state_)
+
+
 def main(args=None):
     rclpy.init(args=args)
+    # kp[0] is the proportional gain for joint 0
     kp = np.array([[0.1], [0.1], [75]])
+    # kp[0] is the derivative gain for joint 1
     kd = np.array([[0.1], [0.1], [0.1]])
+    # create controller, update rate is 10 ms
     pd_controller = PDControllerNode(0.01, kp, kd)
     rclpy.spin(pd_controller)
     rclpy.shutdown()
