@@ -47,7 +47,6 @@ class PlotTool():
         x = np.linspace(0, self.total_time, self.total_counts)
 
         for i in range(3):
-            # TODO: inefficient way of plotting; creating a new figure each iteration
             plt.figure()
             y = self.cur_state_total[i]
             y_r = self.ref_state_total[i]
@@ -55,6 +54,7 @@ class PlotTool():
             plt.ylabel('Joint State')
             plt.plot(x,y, label="response")
             plt.plot(x,y_r, label="reference")
+            plt.legend()
             plt.savefig('joint{0}_response.png'.format(i))
 
         print('Plots created...')
@@ -118,13 +118,6 @@ class PDControllerNode(Node):
     def publish_effort(self):
         # error between current state and reference state
         cur_error = self.ref_state_ - self.cur_state_
-
-        # based on direction of error, apply different Kp value for joint 3
-        '''
-        if cur_error[2] < 0:  # if error negative, we are travelling upwards
-            self.kp_[2] = 1000
-            self.kd_[2] = 30
-        '''
 
         # control input that has proportional and derivate components
         u = self.kp_*cur_error + self.kd_*(cur_error-self.prev_error_) / self.update_period_
