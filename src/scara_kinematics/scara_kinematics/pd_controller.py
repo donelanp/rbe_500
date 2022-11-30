@@ -14,12 +14,14 @@ class PlotTool():
 
         # initialize counters
         self.total_time = 10  # seconds
-        self.counter = 0
         self.total_counts = int(self.total_time / self.update_period)
 
 
     def newPlot(self, ref_state):
         self.ref_state = ref_state
+
+        # reset counter
+        self.counter = 0
 
         # total joint states stored over the time period
         self.cur_state_total = np.empty((3,0), float)
@@ -117,8 +119,19 @@ class PDControllerNode(Node):
         # error between current state and reference state
         cur_error = self.ref_state_ - self.cur_state_
 
+        # based on direction of error, apply different Kp value for joint 3
+        '''
+        if cur_error[2] < 0:  # if error negative, we are travelling upwards
+            self.kp_[2] = 1000
+            self.kd_[2] = 30
+        '''
+
         # control input that has proportional and derivate components
-        u = self.kp_ * cur_error + self.kd_ * (cur_error - self.prev_error_) / self.update_period_
+        u = self.kp_*cur_error + self.kd_*(cur_error-self.prev_error_) / self.update_period_
+
+        # account for gravity
+        u[2,0] = u[2,0] - 9.8
+
 
         # publish control input
         msg = Float64MultiArray()
@@ -137,9 +150,9 @@ class PDControllerNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     # kp[0] is the proportional gain for joint 0
-    kp = np.array([[0.1], [0.1], [75]])
+    kp = np.array([[0.1], [0.1], [100]])
     # kp[0] is the derivative gain for joint 1
-    kd = np.array([[0.1], [0.1], [0.1]])
+    kd = np.array([[0.1], [0.1], [125]])
     # create controller, update rate is 10 ms
     pd_controller = PDControllerNode(0.01, kp, kd)
     rclpy.spin(pd_controller)
