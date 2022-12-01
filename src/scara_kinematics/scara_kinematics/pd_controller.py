@@ -55,7 +55,7 @@ class PlotTool():
             plt.plot(x,y, label="response")
             plt.plot(x,y_r, label="reference")
             plt.legend()
-            plt.savefig('joint{0}_response.png'.format(i))
+            plt.savefig('joint{0}_response.png'.format(i+1))
 
         print('Plots created...')
 
@@ -142,12 +142,15 @@ class PDControllerNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    # kp[0] is the proportional gain for joint 0
-    kp = np.array([[0.1], [0.1], [100]])
-    # kp[0] is the derivative gain for joint 1
-    kd = np.array([[0.1], [0.1], [125]])
+    # kp[i] is the proportional gain for joint i+1
+    kp = np.array([[10], [35], [100]])
+
+    # kd[i] is the derivative gain for joint i+1
+    kd = np.array([[40], [5], [125]])
+
     # create controller, update rate is 10 ms
     pd_controller = PDControllerNode(0.01, kp, kd)
+
     rclpy.spin(pd_controller)
     rclpy.shutdown()
 
