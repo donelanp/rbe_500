@@ -143,10 +143,10 @@ class PDControllerNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     # kp[i] is the proportional gain for joint i+1
-    kp = np.array([[10], [35], [100]])
+    kp = np.array([[2], [3], [10]])
 
     # kd[i] is the derivative gain for joint i+1
-    kd = np.array([[40], [5], [125]])
+    kd = np.array([[10], [6], [10]])
 
     # create controller, update rate is 10 ms
     pd_controller = PDControllerNode(0.01, kp, kd)
