@@ -96,13 +96,13 @@ def generate_launch_description():
     robot_velocity_controller_spawner = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["forward_velocity_controller", "-c", "/controller_manager", "--stopped"],
+        arguments=["forward_velocity_controller", "-c", "/controller_manager"],
     )
 
     robot_effort_controller_spawner = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["forward_effort_controller", "-c", "/controller_manager"],
+        arguments=["forward_effort_controller", "-c", "/controller_manager", "--stopped"],
     )
 
 
