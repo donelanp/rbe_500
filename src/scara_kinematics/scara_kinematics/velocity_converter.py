@@ -77,7 +77,7 @@ class Manipulator:
         for ii in range(0, len(self.links)):
             # link ii-1 pose represented in inertial frame
             if ii == 0: Tprev = np.identity(4)
-            else: Tprev = self.SubForwardKinematics(1, ii-1)
+            else: Tprev = self.SubForwardKinematics(0, ii)
 
             # link ii's contribution to the manipulator jacobian
             if self.links[ii].jointType == JointType.PRISMATIC:
