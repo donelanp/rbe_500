@@ -1,5 +1,5 @@
 # call service using: ros2 service call /JointVelToEndEffectorVel interface_pkg/srv/VelocityConversion "{joint_states:[0,0,0],velocity:[1,2,3]}"
-# call service using: ros2 service call /EndEffectorVelToJointVel interface_pkg/srv/VelocityConversion "{joint_states:[0,0,0],velocity:[0,0.1,-3,0,0,-1]}"
+# call service using: ros2 service call /EndEffectorVelToJointVel interface_pkg/srv/VelocityConversion "{joint_states:[0,0,0],velocity:[0,3.9,-3,0,0,3]}"
 
 import array
 import rclpy
@@ -75,11 +75,11 @@ class Manipulator:
         Tn = self.ForwardKinematics()
 
         for ii in range(0, len(self.links)):
-            # link ii-1 pose represented in inertial frame
+            # previous link's pose represented in inertial frame
             if ii == 0: Tprev = np.identity(4)
             else: Tprev = self.SubForwardKinematics(0, ii)
 
-            # link ii's contribution to the manipulator jacobian
+            # current link's contribution to the manipulator jacobian
             if self.links[ii].jointType == JointType.PRISMATIC:
                 J[0:3,ii] = Tprev[0:3,2]
             elif self.links[ii].jointType == JointType.REVOLUTE:
