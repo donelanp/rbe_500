@@ -2,13 +2,14 @@
 # call service using: ros2 service call /EndEffectorVelToJointVel interface_pkg/srv/VelocityConversion "{joint_states:[0,0,0],velocity:[0,3.9,-3,0,0,3]}"
 
 import array
-import rclpy
-from rclpy.node import Node
-from interface_pkg.srv import VelocityConversion
-
 import math
 import numpy as np
+import rclpy
+import sympy as sym
+import warnings
 from enum import Enum
+from interface_pkg.srv import VelocityConversion
+from rclpy.node import Node
 
 class JointType(Enum):
     PRISMATIC = 1
@@ -132,14 +133,19 @@ class VelocityConverter(Node):
         # calculate jacobian given current joint states
         J = self.Jacobian(request.joint_states)
 
-        # calculate right pseudo-inverse of jacobian
-        Jpinv = J.transpose() @ np.linalg.inv(J @ J.transpose())
+        # create augmented matrix
+        v = np.array([[request.velocity[0]],[request.velocity[1]],[request.velocity[2]],\
+            [request.velocity[3]],[request.velocity[4]],[request.velocity[5]]])
+        Jaug = np.concatenate((J, v), axis=1)
 
-        # calculate joint velocities using pseudo-inverse of jacobian and end effector velocities [linear; angular]
-        v = Jpinv @ np.array([[request.velocity[0]],[request.velocity[1]],[request.velocity[2]]])
+        # put augmented matrix in rref in order to get joint velocities
+        if np.linalg.matrix_rank(J) == np.linalg.matrix_rank(Jaug):
+            rref = sym.Matrix(Jaug).rref()
 
-        # add joint velocities to response
-        response.velocity = array.array('f', [v[0], v[1], v[2]])
+            # add joint velocity to response
+            response.velocity = array.array('f', [rref[0][0,3], rref[0][1,3], rref[0][2,3]])
+        else:
+            warnings.warn('rank(J) != rank(J|v)')
 
         return response
 
