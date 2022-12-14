@@ -151,8 +151,8 @@ class VelocityConverter(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    velocity_pd_controller = VelocityConverter(0.1, 1, 1, 1)
-    rclpy.spin(velocity_pd_controller)
+    velocity_converter = VelocityConverter(0.1, 1, 1, 1)
+    rclpy.spin(velocity_converter)
     rclpy.shutdown()
 
 if __name__ == "__main__":
