@@ -24,6 +24,7 @@ setup(
             "inverse_kin_client = scara_kinematics.inverse_kin_client:main",
             "inverse_kin_service = scara_kinematics.inverse_kin_service:main",
             "pd_controller = scara_kinematics.pd_controller:main",
+            "velocity_pd_controller = scara_kinematics.velocity_pd_controller:main",
             "velocity_converter = scara_kinematics.velocity_converter:main"
         ],
     },
