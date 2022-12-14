@@ -139,14 +139,11 @@ class VelocityConverter(Node):
         Jaug = np.concatenate((J, v), axis=1)
 
         # put augmented matrix in rref in order to get joint velocities
-        if np.linalg.matrix_rank(J) == np.linalg.matrix_rank(Jaug):
-            rref = sym.Matrix(Jaug).rref()
+        rref = sym.Matrix(Jaug).rref()
 
-            # add joint velocity to response
-            response.velocity = array.array('f', [rref[0][0,3], rref[0][1,3], rref[0][2,3]])
-        else:
-            warnings.warn('rank(J) != rank(J|v)')
-            response.velocity = array.array('f', [0,0,0])
+        # add joint velocity to response
+        # note that if inverse kinematics is not possible (rank(Jaug) > 3) then velocity is set to zero vector
+        response.velocity = array.array('f', [rref[0][0,3], rref[0][1,3], rref[0][2,3]])
 
         return response
 
