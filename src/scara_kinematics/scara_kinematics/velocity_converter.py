@@ -146,6 +146,7 @@ class VelocityConverter(Node):
             response.velocity = array.array('f', [rref[0][0,3], rref[0][1,3], rref[0][2,3]])
         else:
             warnings.warn('rank(J) != rank(J|v)')
+            response.velocity = array.array('f', [0,0,0])
 
         return response
 
