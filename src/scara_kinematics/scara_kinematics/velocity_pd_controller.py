@@ -62,22 +62,31 @@ class PlotTool():
 
         print('Plots created...')
 
+class MinimalClientAsync(Node):
+    def __init__(self, service_name):
+        super().__init__(service_name.lower() + '_client')
+        self.client_ = self.create_client(VelocityConversion, service_name)
+        while not self.client_.wait_for_service(timeout_sec=10.0):
+            self.get_logger().info('velocity conversion service not available, waiting again...')
+        self.req_ = VelocityConversion.Request()
+
+    def send_request(self, q, v):
+        self.req_.joint_states = q
+        self.req_.velocity = v
+        self.future_ = self.client_.call_async(self.req_)
+        rclpy.spin_until_future_complete(self, self.future_)
+        return self.future_.result()
 
 class Velocity_PDControllerNode(Node):
     def __init__(self, update_period, kp, kd):
         # ros node setup (service, client, subscriber, publisher, timer)
         super().__init__('velocity_pd_controller')
         self.reference_service_ = self.create_service(EndEffectorVelRef, 'EndEffectorVelRef', self.ref_callback)
-        self.converter_client_ = self.create_client(VelocityConversion, 'EndEffectorVelToJointVel')
-        self.converter_req_ = VelocityConversion.Request()
+        self.to_joint_vel_client_ = MinimalClientAsync('EndEffectorVelToJointVel')
+        self.to_end_eff_vel_client_ = MinimalClientAsync('JointVelToEndEffectorVel')
         self.joint_subscriber_ = self.create_subscription(JointState, '/joint_states', self.joint_callback, 10)
         self.effort_publisher_ = self.create_publisher(Float64MultiArray, '/forward_effort_controller/commands', 10)
         self.timer_ = self.create_timer(update_period, self.publish_effort)
-        while not self.converter_client_.wait_for_service(timeout_sec=10.0):
-            self.get_logger().info('velocity conversion service not available, waiting again...')
-
-        self.converter_req_.joint_states = array.array('f', [0,0,0])
-        self.converter_req_.velocity = array.array('f', [0,0,0,0,0,0])
 
         # update rate for effort
         self.update_period_ = update_period
@@ -112,35 +121,20 @@ class Velocity_PDControllerNode(Node):
         assert len(msg.velocity) == 3, 'message should contain 3 joint velocities'
 
         # store current state
-        self.cur_state_[0] = msg.position[0]
-        self.cur_state_[1] = msg.position[1]
-        self.cur_state_[2] = msg.position[2]
+        self.cur_state_ = np.expand_dims(np.array(msg.position), axis=1)
 
         # store current velocity
-        self.cur_vel_[0] = msg.velocity[0]
-        self.cur_vel_[1] = msg.velocity[1]
-        self.cur_vel_[2] = msg.velocity[2]
-
+        self.cur_vel_ = np.expand_dims(np.array(msg.velocity), axis=1)
 
     def ref_callback(self, request, response):
         assert len(request.velocity) == 6, 'request should contain 6 end effector velocity values'
 
-        # populate velocity conversion request
-        for i in range(0,3):
-            self.converter_req_.joint_states[i] = self.cur_state_[i]
-            self.converter_req_.velocity[i] = request.velocity[i]
-        for i in range(3,6):
-            self.converter_req_.velocity[i] = request.velocity[i]
+        # convert end effector velocity to joint velocity
+        q = array.array('f', [self.cur_state_[0], self.cur_state_[1], self.cur_state_[2]])
+        joint_vel = self.to_joint_vel_client_.send_request(q, request.velocity)
 
-        # get desired joint velocity through conversion service
-        self.future = self.converter_client_.call_async(self.converter_req_)
-        rclpy.spin_until_future_complete(self, self.future)
-        joint_vel = self.future.result()
-
-        # store reference state
-        self.ref_vel_[0] = joint_vel.velocity[0]
-        self.ref_vel_[1] = joint_vel.velocity[1]
-        self.ref_vel_[2] = joint_vel.velocity[2]
+        # store reference joint velocity
+        self.ref_vel_ = np.expand_dims(np.array(joint_vel.velocity), axis=1)
 
         # overwrite plotting tool for each new request
         self.plot_tool_.newPlot(self.ref_vel_)
@@ -156,7 +150,6 @@ class Velocity_PDControllerNode(Node):
 
         # account for gravity
         u[2,0] = u[2,0] - 9.8
-
 
         # publish control input
         msg = Float64MultiArray()
@@ -175,10 +168,10 @@ class Velocity_PDControllerNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     # kp[i] is the proportional gain for joint i+1
-    kp = np.array([[2], [3], [10]])
+    kp = np.array([[0.1], [0.1], [0.1]])
 
     # kd[i] is the derivative gain for joint i+1
-    kd = np.array([[10], [6], [10]])
+    kd = np.array([[0.1], [0.1], [0.1]])
 
     # create controller, update rate is 10 ms
     velocity_pd_controller = Velocity_PDControllerNode(0.01, kp, kd)

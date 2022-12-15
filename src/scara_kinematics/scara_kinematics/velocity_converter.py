@@ -122,7 +122,7 @@ class VelocityConverter(Node):
         J = self.Jacobian(request.joint_states)
 
         # calculate end effector velocities [linear; angular] using jacobian and joint velocities
-        v = J @ np.array([[request.velocity[0]],[request.velocity[1]],[request.velocity[2]]])
+        v = J @ np.array(request.velocity)
 
         # add end effector velocity to response
         response.velocity = array.array('f', [v[0], v[1], v[2], v[3], v[4], v[5]])
@@ -134,8 +134,7 @@ class VelocityConverter(Node):
         J = self.Jacobian(request.joint_states)
 
         # create augmented matrix
-        v = np.array([[request.velocity[0]],[request.velocity[1]],[request.velocity[2]],\
-            [request.velocity[3]],[request.velocity[4]],[request.velocity[5]]])
+        v = np.expand_dims(np.array(request.velocity), axis=1)
         Jaug = np.concatenate((J, v), axis=1)
 
         # put augmented matrix in rref in order to get joint velocities
