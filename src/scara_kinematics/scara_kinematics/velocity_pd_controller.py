@@ -52,12 +52,12 @@ class PlotTool():
             y = self.cur_state_total[i]
             y_r = self.ref_state_total[i]
             plt.xlabel('Time (seconds)')
-            plt.ylabel('Joint Velocity')
-            plt.title('Joint {0} Response'.format(i+1))
+            plt.ylabel('Velocity')
+            plt.title('Dimension {0} Response'.format(i+1))
             plt.plot(x,y, label="response")
             plt.plot(x,y_r, label="reference")
             plt.legend()
-            plt.savefig('joint{0}_response.png'.format(i+1))
+            plt.savefig('dimension{0}_response.png'.format(i+1))
 
         print('Plots created...')
 
@@ -112,7 +112,7 @@ class Velocity_PDControllerNode(Node):
         self.plot_tool_ = PlotTool(self.update_period_)
 
         # create dummy plot that will be overwritten once a reference state is sent
-        #self.plot_tool_.newPlot(self.ref_vel_)
+        self.plot_tool_.newPlot(np.zeros((3,1)))
 
 
     def joint_callback(self, msg):
@@ -162,8 +162,14 @@ class Velocity_PDControllerNode(Node):
         # store current error as previous error for next round
         self.prev_error_ = cur_error
 
+        # compute current end effector velocity
+        q = array.array('f', [self.cur_state_[0], self.cur_state_[1], self.cur_state_[2]])
+        v = array.array('f', [self.cur_vel_[0], self.cur_vel_[1], self.cur_vel_[2]])
+        end_eff_vel = self.to_joint_vel_client_.send_request(q, v)
+        end_eff_vel = np.expand_dims(np.array(end_eff_vel.velocity), axis=1)
+
         # store current joint velocities
-        self.plot_tool_.new_state(self.cur_vel_)
+        self.plot_tool_.new_state(end_eff_vel[0:3])
 
 
 def main(args=None):
