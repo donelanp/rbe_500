@@ -70,7 +70,7 @@ class Manipulator:
         return T
 
     def Jacobian(self):
-        J = np.zeros((6, len(self.links)))
+        J = np.zeros((3, len(self.links)))
 
         # end effector pose represented in inertial frame
         Tn = self.ForwardKinematics()
@@ -85,7 +85,7 @@ class Manipulator:
                 J[0:3,ii] = Tprev[0:3,2]
             elif self.links[ii].jointType == JointType.REVOLUTE:
                 J[0:3,ii] = np.cross(Tprev[0:3,2], Tn[0:3,3] - Tprev[0:3,3])
-                J[3:6,ii] = Tprev[0:3,2]
+                #J[3:6,ii] = Tprev[0:3,2]
             else: raise Exception('Unhandled joint type')
 
         return J
@@ -125,7 +125,7 @@ class VelocityConverter(Node):
         v = J @ np.array(request.velocity)
 
         # add end effector velocity to response
-        response.velocity = array.array('f', [v[0], v[1], v[2], v[3], v[4], v[5]])
+        response.velocity = array.array('f', [v[0], v[1], v[2]])
 
         return response
 
@@ -133,16 +133,20 @@ class VelocityConverter(Node):
         # calculate jacobian given current joint states
         J = self.Jacobian(request.joint_states)
 
+        '''
         # create augmented matrix
         v = np.expand_dims(np.array(request.velocity), axis=1)
         Jaug = np.concatenate((J, v), axis=1)
 
         # put augmented matrix in rref in order to get joint velocities
         rref = sym.Matrix(Jaug).rref()
+        '''
+
+        q_v = np.matmul(np.linalg.inv(J), request.velocity)
 
         # add joint velocity to response
         # note that if inverse kinematics is not possible (rank(Jaug) > 3) then velocity is set to zero vector
-        response.velocity = array.array('f', [rref[0][0,3], rref[0][1,3], rref[0][2,3]])
+        response.velocity = array.array('f', [q_v[0], q_v[1], q_v[2]])
 
         return response
 
