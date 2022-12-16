@@ -133,16 +133,20 @@ class VelocityConverter(Node):
         # calculate jacobian given current joint states
         J = self.Jacobian(request.joint_states)
 
-        # create augmented matrix
+        # isolate linear components of Jacobian and end effector velocity
         v = np.expand_dims(np.array(request.velocity), axis=1)
-        Jaug = np.concatenate((J, v), axis=1)
+        J = J[0:3,:]
+        ve = v[0:3]
 
-        # put augmented matrix in rref in order to get joint velocities
-        rref = sym.Matrix(Jaug).rref()
+        # compute joint velocities
+        if np.linalg.det(J) > 0:
+            vj = np.linalg.inv(J) @ ve
+        else:
+            vj = np.zeros((3,1))
 
         # add joint velocity to response
-        # note that if inverse kinematics is not possible (rank(Jaug) > 3) then velocity is set to zero vector
-        response.velocity = array.array('f', [rref[0][0,3], rref[0][1,3], rref[0][2,3]])
+        # note that if inverse velocity is not possible then velocity is set to zero vector
+        response.velocity = array.array('f', [vj[0], vj[1], vj[2]])
 
         return response
 
