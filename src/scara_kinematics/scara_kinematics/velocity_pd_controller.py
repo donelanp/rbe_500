@@ -171,7 +171,7 @@ class Velocity_PDControllerNode(Node):
 
         # store current joint velocities
         self.cartesian_plot_tool_.new_state(end_eff_vel[0:3], self.ref_vel_[0:3])
-        self.joint_plot_tool_.new_state(ref_vel, self.cur_vel_)
+        self.joint_plot_tool_.new_state(self.cur_vel_, ref_vel)
 
 def main(args=None):
     rclpy.init(args=args)
