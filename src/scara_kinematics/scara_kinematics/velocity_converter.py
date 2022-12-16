@@ -70,7 +70,7 @@ class Manipulator:
         return T
 
     def Jacobian(self):
-        J = np.zeros((6, len(self.links)))
+        J = np.zeros((3, len(self.links)))
 
         # end effector pose represented in inertial frame
         Tn = self.ForwardKinematics()
@@ -85,7 +85,7 @@ class Manipulator:
                 J[0:3,ii] = Tprev[0:3,2]
             elif self.links[ii].jointType == JointType.REVOLUTE:
                 J[0:3,ii] = np.cross(Tprev[0:3,2], Tn[0:3,3] - Tprev[0:3,3])
-                J[3:6,ii] = Tprev[0:3,2]
+                #J[3:6,ii] = Tprev[0:3,2]
             else: raise Exception('Unhandled joint type')
 
         return J

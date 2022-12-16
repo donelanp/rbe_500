@@ -126,21 +126,20 @@ class Velocity_PDControllerNode(Node):
         self.cur_vel_ = np.expand_dims(np.array(msg.velocity), axis=1)
 
     def ref_callback(self, request, response):
-        assert len(request.velocity) == 6, 'request should contain 6 end effector velocity values'
+        #assert len(request.velocity) == 6, 'request should contain 6 end effector velocity values'
 
         # store reference joint velocity
         self.ref_vel_ = np.expand_dims(np.array(request.velocity), axis=1)
 
         # overwrite plotting tool for each new request
-        #self.plot_tool_.newPlot(self.ref_vel_)
+        self.plot_tool_.newPlot(self.ref_vel_)
 
         return response
 
     def publish_effort(self):
         # convert end effector velocity to joint velocity
         q = array.array('f', [self.cur_state_[0], self.cur_state_[1], self.cur_state_[2]])
-        v = array.array('f', [self.ref_vel_[0], self.ref_vel_[1], self.ref_vel_[2], \
-            self.ref_vel_[3], self.ref_vel_[4], self.ref_vel_[5]])
+        v = array.array('f', [self.ref_vel_[0], self.ref_vel_[1], self.ref_vel_[2]])
         joint_vel = self.to_joint_vel_client_.send_request(q, v)
         ref_vel = np.expand_dims(np.array(joint_vel.velocity), axis=1)
 
@@ -164,7 +163,7 @@ class Velocity_PDControllerNode(Node):
         self.prev_error_ = cur_error
 
         # store current joint velocities
-        #self.plot_tool_.new_state(self.cur_vel_)
+        self.plot_tool_.new_state(self.cur_vel_)
 
 
 def main(args=None):
