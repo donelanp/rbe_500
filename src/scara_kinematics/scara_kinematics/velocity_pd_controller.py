@@ -10,35 +10,32 @@ from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
 class PlotTool():
-    def __init__(self, update_period_):
+    def __init__(self, update_period_, title_name_):
         self.update_period = update_period_
+        self.title_name = title_name_
 
         # initialize counters
         self.total_time = 10  # seconds
         self.total_counts = int(self.total_time / self.update_period)
 
-
-    def newPlot(self, ref_state):
-        self.ref_state = ref_state
-
+    def new_plot(self):
         # reset counter
         self.counter = 0
 
-        # total joint states stored over the time period
-        self.cur_state_total = np.empty((3,0), float)
+        # true states stored over the time period
+        self.cur_state_total = np.empty((3,self.total_counts), float)
 
-        # reference values for each time step will be the same
-        q1_r_arr = np.full((1,self.total_counts), self.ref_state[0])
-        q2_r_arr = np.full((1,self.total_counts), self.ref_state[1])
-        q3_r_arr = np.full((1,self.total_counts), self.ref_state[2])
-        self.ref_state_total = np.vstack((q1_r_arr, q2_r_arr, q3_r_arr))
+        # reference states stored over the time period
+        self.ref_state_total = np.empty((3, self.total_counts), float)
+
         print("Starting plotting tool...")
 
-    def new_state(self, cur_state_):
-        self.cur_state_total = np.hstack([self.cur_state_total, cur_state_])
-        
-        # increment counter for each new position stored
-        self.counter = self.counter + 1
+    def new_state(self, cur_state_, ref_state_):
+        self.cur_state_total[:,self.counter] = cur_state_.flatten()
+        self.ref_state_total[:,self.counter] = ref_state_.flatten()
+
+        # increment counter for each new state stored
+        self.counter += 1
 
         # if we are at the total time, print each joint's response
         if self.counter == self.total_counts:
@@ -53,13 +50,14 @@ class PlotTool():
             y_r = self.ref_state_total[i]
             plt.xlabel('Time (seconds)')
             plt.ylabel('Velocity')
-            plt.title('Dimension {0} Response'.format(i+1))
+            plt.title(f'{self.title_name} {i+1} response')
             plt.plot(x,y, label="response")
             plt.plot(x,y_r, label="reference")
             plt.legend()
-            plt.savefig('dimension{0}_response.png'.format(i+1))
+            plt.savefig(f'{self.title_name}_{i+1}_response.png')
 
         print('Plots created...')
+        self.counter = 0
 
 class MinimalClientAsync(Node):
     def __init__(self, service_name):
@@ -109,11 +107,12 @@ class Velocity_PDControllerNode(Node):
         self.prev_error_ = np.zeros((3,1))
 
         # create time response plotting tool
-        self.plot_tool_ = PlotTool(self.update_period_)
+        self.cartesian_plot_tool_ = PlotTool(self.update_period_, 'dimension')
+        self.joint_plot_tool_ = PlotTool(self.update_period_, 'joint')
 
         # create dummy plot that will be overwritten once a reference state is sent
-        self.plot_tool_.newPlot(np.zeros((3,1)))
-
+        self.cartesian_plot_tool_.new_plot()
+        self.joint_plot_tool_.new_plot()
 
     def joint_callback(self, msg):
         assert len(msg.position) == 3, 'message should contain 3 joint values'
@@ -132,7 +131,8 @@ class Velocity_PDControllerNode(Node):
         self.ref_vel_ = np.expand_dims(np.array(request.velocity), axis=1)
 
         # overwrite plotting tool for each new request
-        self.plot_tool_.newPlot(self.ref_vel_[0:3])
+        self.cartesian_plot_tool_.new_plot()
+        self.joint_plot_tool_.new_plot()
 
         return response
 
@@ -170,8 +170,8 @@ class Velocity_PDControllerNode(Node):
         end_eff_vel = np.expand_dims(np.array(end_eff_vel.velocity), axis=1)
 
         # store current joint velocities
-        self.plot_tool_.new_state(end_eff_vel[0:3])
-
+        self.cartesian_plot_tool_.new_state(end_eff_vel[0:3], self.ref_vel_[0:3])
+        self.joint_plot_tool_.new_state(ref_vel, self.cur_vel_)
 
 def main(args=None):
     rclpy.init(args=args)
