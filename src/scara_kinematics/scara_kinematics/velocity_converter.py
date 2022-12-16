@@ -5,8 +5,6 @@ import array
 import math
 import numpy as np
 import rclpy
-import sympy as sym
-import warnings
 from enum import Enum
 from interface_pkg.srv import VelocityConversion
 from rclpy.node import Node
@@ -100,7 +98,7 @@ class VelocityConverter(Node):
         self.length0_ = length0
         self.length1_ = length1
         self.length2_ = length2
-    
+
     def Jacobian(self, jointValues):
         # joint variables
         t1 = jointValues[0]

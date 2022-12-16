@@ -31,15 +31,16 @@ class PlotTool():
         print("Starting plotting tool...")
 
     def new_state(self, cur_state_, ref_state_):
-        self.cur_state_total[:,self.counter] = cur_state_.flatten()
-        self.ref_state_total[:,self.counter] = ref_state_.flatten()
+        if self.counter < self.total_counts:
+            self.cur_state_total[:,self.counter] = cur_state_.flatten()
+            self.ref_state_total[:,self.counter] = ref_state_.flatten()
 
-        # increment counter for each new state stored
-        self.counter += 1
+            # increment counter for each new state stored
+            self.counter += 1
 
-        # if we are at the total time, print each joint's response
-        if self.counter == self.total_counts:
-            self.plot_joints()
+            # if we are at the total time, print each joint's response
+            if self.counter == self.total_counts:
+                self.plot_joints()
 
     def plot_joints(self):
         x = np.linspace(0, self.total_time, self.total_counts)
@@ -57,7 +58,6 @@ class PlotTool():
             plt.savefig(f'{self.title_name}_{i+1}_response.png')
 
         print('Plots created...')
-        self.counter = 0
 
 class MinimalClientAsync(Node):
     def __init__(self, service_name):
@@ -166,7 +166,7 @@ class Velocity_PDControllerNode(Node):
         # compute current end effector velocity
         q = array.array('f', [self.cur_state_[0], self.cur_state_[1], self.cur_state_[2]])
         v = array.array('f', [self.cur_vel_[0], self.cur_vel_[1], self.cur_vel_[2]])
-        end_eff_vel = self.to_joint_vel_client_.send_request(q, v)
+        end_eff_vel = self.to_end_eff_vel_client_.send_request(q, v)
         end_eff_vel = np.expand_dims(np.array(end_eff_vel.velocity), axis=1)
 
         # store current joint velocities
