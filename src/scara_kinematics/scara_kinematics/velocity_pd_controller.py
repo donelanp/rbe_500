@@ -26,16 +26,20 @@ class PlotTool():
 
         # total joint states stored over the time period
         self.cur_state_total = np.empty((3,0), float)
+        self.ref_state_total = np.empty((3,0), float)
 
+        '''
         # reference values for each time step will be the same
         q1_r_arr = np.full((1,self.total_counts), self.ref_state[0])
         q2_r_arr = np.full((1,self.total_counts), self.ref_state[1])
         q3_r_arr = np.full((1,self.total_counts), self.ref_state[2])
         self.ref_state_total = np.vstack((q1_r_arr, q2_r_arr, q3_r_arr))
+        '''
         print("Starting plotting tool...")
 
-    def new_state(self, cur_state_):
+    def new_state(self, cur_state_, ref_state_):
         self.cur_state_total = np.hstack([self.cur_state_total, cur_state_])
+        self.ref_state_total = np.hstack([self.ref_state_total, ref_state_])
         
         # increment counter for each new position stored
         self.counter = self.counter + 1
@@ -53,11 +57,11 @@ class PlotTool():
             y_r = self.ref_state_total[i]
             plt.xlabel('Time (seconds)')
             plt.ylabel('Velocity')
-            plt.title('Dimension {0} Response'.format(i+1))
+            plt.title('Joint {0} Response'.format(i+1))
             plt.plot(x,y, label="response")
             plt.plot(x,y_r, label="reference")
             plt.legend()
-            plt.savefig('dimension{0}_response.png'.format(i+1))
+            plt.savefig('joint{0}_response.png'.format(i+1))
 
         print('Plots created...')
 
@@ -97,7 +101,7 @@ class Velocity_PDControllerNode(Node):
         self.kd_ = kd
 
         # reference (goal) velocity of end effector (6x1 vector)
-        self.ref_vel_ = np.zeros((6,1))
+        self.ref_vel_ = np.zeros((3,1))
 
         # current state of joints (3x1 vector)
         self.cur_state_ = np.zeros((3,1))
@@ -169,7 +173,7 @@ class Velocity_PDControllerNode(Node):
         end_eff_vel = np.expand_dims(np.array(end_eff_vel.velocity), axis=1)
 
         # store current joint velocities
-        self.plot_tool_.new_state(end_eff_vel[0:3])
+        self.plot_tool_.new_state(self.cur_vel_, ref_vel)
 
 
 def main(args=None):
