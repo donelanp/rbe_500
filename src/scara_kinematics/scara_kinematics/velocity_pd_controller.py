@@ -1,6 +1,7 @@
 # call service using: ros2 service call /EndEffectorVelRef interface_pkg/srv/EndEffectorVelRef "{velocity:[0,0,0,0,0,0]}"
 
 import array
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 import rclpy
@@ -23,17 +24,19 @@ class PlotTool():
         self.counter = 0
 
         # true states stored over the time period
-        self.cur_state_total = np.empty((3,self.total_counts), float)
+        self.cur_state_total = np.empty((3,0), float)
 
         # reference states stored over the time period
-        self.ref_state_total = np.empty((3, self.total_counts), float)
+        self.ref_state_total = np.empty((3,0), float)
 
         print("Starting plotting tool...")
 
     def new_state(self, cur_state_, ref_state_):
-        self.cur_state_total[:,self.counter] = cur_state_.flatten()
-        self.ref_state_total[:,self.counter] = ref_state_.flatten()
+        #self.cur_state_total[:,self.counter] = cur_state_.flatten()
+        #self.ref_state_total[:,self.counter] = ref_state_.flatten()
 
+        self.cur_state_total = np.hstack([self.cur_state_total, cur_state_])
+        self.ref_state_total = np.hstack([self.ref_state_total, ref_state_])
         # increment counter for each new state stored
         self.counter += 1
 
@@ -57,7 +60,6 @@ class PlotTool():
             plt.savefig(f'{self.title_name}_{i+1}_response.png')
 
         print('Plots created...')
-        self.counter = 0
 
 class MinimalClientAsync(Node):
     def __init__(self, service_name):
@@ -114,6 +116,7 @@ class Velocity_PDControllerNode(Node):
         self.cartesian_plot_tool_.new_plot()
         self.joint_plot_tool_.new_plot()
 
+
     def joint_callback(self, msg):
         assert len(msg.position) == 3, 'message should contain 3 joint values'
         assert len(msg.velocity) == 3, 'message should contain 3 joint velocities'
@@ -124,9 +127,8 @@ class Velocity_PDControllerNode(Node):
         # store current velocity
         self.cur_vel_ = np.expand_dims(np.array(msg.velocity), axis=1)
 
-    def ref_callback(self, request, response):
-        #assert len(request.velocity) == 6, 'request should contain 6 end effector velocity values'
 
+    def ref_callback(self, request, response):
         # store reference joint velocity
         self.ref_vel_ = np.expand_dims(np.array(request.velocity), axis=1)
 
@@ -136,15 +138,16 @@ class Velocity_PDControllerNode(Node):
 
         return response
 
+
     def publish_effort(self):
         # convert end effector velocity to joint velocity
         q = array.array('f', [self.cur_state_[0], self.cur_state_[1], self.cur_state_[2]])
-        v = array.array('f', [self.ref_vel_[0], self.ref_vel_[1], self.ref_vel_[2]])
-        joint_vel = self.to_joint_vel_client_.send_request(q, v)
-        ref_vel = np.expand_dims(np.array(joint_vel.velocity), axis=1)
+        v_ref_e = array.array('f', [self.ref_vel_[0], self.ref_vel_[1], self.ref_vel_[2]])
+        joint_vel = self.to_joint_vel_client_.send_request(q, v_ref_e)
+        joint_ref_vel = np.expand_dims(np.array(joint_vel.velocity), axis=1)
 
         # error between current velocity and reference velocity
-        cur_error = ref_vel - self.cur_vel_
+        cur_error = joint_ref_vel - self.cur_vel_
 
         # control input that has proportional and derivate components
         u = self.kp_*cur_error + self.kd_*(cur_error-self.prev_error_) / self.update_period_
@@ -163,19 +166,19 @@ class Velocity_PDControllerNode(Node):
         self.prev_error_ = cur_error
 
         # compute current end effector velocity
-        q = array.array('f', [self.cur_state_[0], self.cur_state_[1], self.cur_state_[2]])
-        v = array.array('f', [self.cur_vel_[0], self.cur_vel_[1], self.cur_vel_[2]])
-        end_eff_vel = self.to_joint_vel_client_.send_request(q, v)
+        v_cur_e = array.array('f', [self.cur_vel_[0], self.cur_vel_[1], self.cur_vel_[2]])
+        end_eff_vel = self.to_end_eff_vel_client_.send_request(q, v_cur_e)
         end_eff_vel = np.expand_dims(np.array(end_eff_vel.velocity), axis=1)
 
         # store current joint velocities
-        self.cartesian_plot_tool_.new_state(end_eff_vel[0:3], self.ref_vel_[0:3])
-        self.joint_plot_tool_.new_state(ref_vel, self.cur_vel_)
+        self.cartesian_plot_tool_.new_state(end_eff_vel, self.ref_vel_)
+        self.joint_plot_tool_.new_state(self.cur_vel_, joint_ref_vel)
+
 
 def main(args=None):
     rclpy.init(args=args)
     # kp[i] is the proportional gain for joint i+1
-    kp = np.array([[1], [1], [1]])
+    kp = np.array([[1], [1], [100]])
 
     # kd[i] is the derivative gain for joint i+1
     kd = np.array([[0.01], [0.01], [0.01]])

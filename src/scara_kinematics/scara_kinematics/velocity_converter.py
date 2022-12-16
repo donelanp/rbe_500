@@ -125,7 +125,7 @@ class VelocityConverter(Node):
         v = J @ np.array(request.velocity)
 
         # add end effector velocity to response
-        response.velocity = array.array('f', [v[0], v[1], v[2], v[3], v[4], v[5]])
+        response.velocity = array.array('f', [v[0], v[1], v[2]])
 
         return response
 
