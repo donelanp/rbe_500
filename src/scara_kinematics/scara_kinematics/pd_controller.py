@@ -13,7 +13,7 @@ class PlotTool():
         self.update_period = update_period_
 
         # initialize counters
-        self.total_time = 10  # seconds
+        self.total_time = 5  # seconds
         self.total_counts = int(self.total_time / self.update_period)
 
 
@@ -52,6 +52,7 @@ class PlotTool():
             y_r = self.ref_state_total[i]
             plt.xlabel('Time (seconds)')
             plt.ylabel('Joint State')
+            plt.title('Joint {0} Response'.format(i+1))
             plt.plot(x,y, label="response")
             plt.plot(x,y_r, label="reference")
             plt.legend()
@@ -96,16 +97,15 @@ class PDControllerNode(Node):
     def joint_callback(self, msg):
         assert len(msg.position) == 3, 'message should contain 3 joint values'
 
-        # store current state
-        self.cur_state_[0] = msg.position[0]
-        self.cur_state_[1] = msg.position[1]
-        self.cur_state_[2] = msg.position[2]
-
+        # store current state (velocity)
+        self.cur_state_[0] = msg.velocity[0]
+        self.cur_state_[1] = msg.velocity[1]
+        self.cur_state_[2] = msg.velocity[2]
 
     def ref_callback(self, request, response):
         assert len(request.joint_states) == 3, 'request should contain 3 joint values'
 
-        # store reference state
+        # store reference state (reference velocity)
         self.ref_state_[0] = request.joint_states[0]
         self.ref_state_[1] = request.joint_states[1]
         self.ref_state_[2] = request.joint_states[2]
@@ -122,7 +122,7 @@ class PDControllerNode(Node):
         # control input that has proportional and derivate components
         u = self.kp_*cur_error + self.kd_*(cur_error-self.prev_error_) / self.update_period_
 
-        # account for gravity
+        # account for velocity in the prismatic joint
         u[2,0] = u[2,0] - 9.8
 
 
@@ -143,10 +143,12 @@ class PDControllerNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     # kp[i] is the proportional gain for joint i+1
-    kp = np.array([[2], [3], [10]])
+    #kp = np.array([[2], [3], [10]])
+    kp = np.array([[0], [0], [10]])
 
     # kd[i] is the derivative gain for joint i+1
-    kd = np.array([[10], [6], [10]])
+    #kd = np.array([[10], [6], [10]])
+    kd = np.array([[0], [0], [10]])
 
     # create controller, update rate is 10 ms
     pd_controller = PDControllerNode(0.01, kp, kd)

@@ -1,5 +1,6 @@
 # call service using: ros2 service call /EndEffectorVelRef interface_pkg/srv/EndEffectorVelRef "{velocity:[0,0,0,0,0,0]}"
 
+import time
 import array
 import time
 import numpy as np
@@ -98,6 +99,7 @@ class Velocity_PDControllerNode(Node):
 
         # reference (goal) velocity of end effector (6x1 vector)
         self.ref_vel_ = np.zeros((3,1))
+        self.ref_vel_e = np.zeros((3,1))
 
         # current state of joints (3x1 vector)
         self.cur_state_ = np.zeros((3,1))
@@ -117,6 +119,7 @@ class Velocity_PDControllerNode(Node):
         self.joint_plot_tool_.new_plot()
 
 
+    # subscribes to joint states that are published by gazebo
     def joint_callback(self, msg):
         assert len(msg.position) == 3, 'message should contain 3 joint values'
         assert len(msg.velocity) == 3, 'message should contain 3 joint velocities'
@@ -127,10 +130,15 @@ class Velocity_PDControllerNode(Node):
         # store current velocity
         self.cur_vel_ = np.expand_dims(np.array(msg.velocity), axis=1)
 
-
     def ref_callback(self, request, response):
+        assert len(request.velocity) == 6, 'request should contain 6 end effector velocity values'
+
+        # convert end effector velocity to joint velocity
+        q = array.array('f', [self.cur_state_[0], self.cur_state_[1], self.cur_state_[2]])
+        joint_vel = self.to_joint_vel_client_.send_request(q, request.velocity)
+
         # store reference joint velocity
-        self.ref_vel_ = np.expand_dims(np.array(request.velocity), axis=1)
+        self.ref_vel_ = np.expand_dims(np.array(joint_vel.velocity), axis=1)
 
         # overwrite plotting tool for each new request
         self.cartesian_plot_tool_.new_plot()
@@ -147,11 +155,11 @@ class Velocity_PDControllerNode(Node):
         joint_ref_vel = np.expand_dims(np.array(joint_vel.velocity), axis=1)
 
         # error between current velocity and reference velocity
-        cur_error = joint_ref_vel - self.cur_vel_
+        cur_error = self.ref_vel_ - self.cur_vel_
 
         # control input that has proportional and derivate components
         u = self.kp_*cur_error + self.kd_*(cur_error-self.prev_error_) / self.update_period_
-
+        
         # account for gravity
         u[2,0] = u[2,0] - 9.8
 
@@ -178,10 +186,10 @@ class Velocity_PDControllerNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     # kp[i] is the proportional gain for joint i+1
-    kp = np.array([[1], [1], [100]])
+    kp = np.array([[0.1], [0.1], [0.1]])
 
     # kd[i] is the derivative gain for joint i+1
-    kd = np.array([[0.01], [0.01], [0.01]])
+    kd = np.array([[0.1], [0.1], [0.1]])
 
     # create controller, update rate is 10 ms
     velocity_pd_controller = Velocity_PDControllerNode(0.01, kp, kd)
